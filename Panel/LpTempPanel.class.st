@@ -5,7 +5,8 @@ Class {
 		'title',
 		'header',
 		'titleLabel',
-		'content'
+		'content',
+		'tool'
 	],
 	#category : 'Panel-Elements',
 	#package : 'Panel',
@@ -24,7 +25,7 @@ LpTempPanel class >> title: aString content: anElement [
 { #category : 'accessing' }
 LpTempPanel >> close [
 
-	self dockChild ifNotNil: [ :aDockChild | aDockChild content: nil ].
+	self dockChild ifNotNil: [ :aDockChild | aDockChild removePanel: self ].
 ]
 
 { #category : 'initialization' }
@@ -154,4 +155,16 @@ LpTempPanel >> titleLabel [
 LpTempPanel >> titleLabel: anObject [
 
 	titleLabel := anObject
+]
+
+{ #category : 'accessing' }
+LpTempPanel >> tool [
+
+	^ tool
+]
+
+{ #category : 'accessing' }
+LpTempPanel >> tool: anObject [
+
+	tool := anObject
 ]

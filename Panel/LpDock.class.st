@@ -11,9 +11,7 @@ Class {
 		'dragSession',
 		'popup',
 		'scrim',
-		'playgroundCounter',
 		'menuItems',
-		'playgroundFactory',
 		'morphsSuppressed'
 	],
 	#category : 'Panel-Elements',
@@ -99,6 +97,12 @@ LpDock >> centerColumn: anObject [
 	centerColumn := anObject
 ]
 
+{ #category : 'action' }
+LpDock >> closeAllPanels [
+
+	self panels do: [ :each | each close ].
+]
+
 { #category : 'morph' }
 LpDock >> closeAllPlaygrounds [
 
@@ -118,18 +122,28 @@ LpDock >> closePopup [
 { #category : 'accessing' }
 LpDock >> defaultMenuItems [
 
-	^ OrderedCollection new
-		add: (LpMenuItem label: '+ New playground' action: [ self newPlaygroundIn: LpArea bottom ]);
-		add: (LpMenuItem label: '+ New playground in center' action: [ self newPlaygroundIn: LpArea center ]);
-		add: (LpMenuItem label: '+ New playground on the left' action: [ self newPlaygroundIn: LpArea start ]);
-		add: (LpMenuItem label: 'Close all' action: [ self closeAllPlaygrounds ]);
-		yourself.
+	| items |
+	items := OrderedCollection new.
+	LpTool all do: [ :each | items add: (each menuItemFor: self) ].
+	items add: (LpMenuItem label: 'Close all' action: [ self closeAllPanels ]).
+	^ items.
 ]
 
 { #category : 'accessing' }
 LpDock >> dock [
 
 	^ self.
+]
+
+{ #category : 'accessing' }
+LpDock >> dockChildAt: aPoint [
+
+	LpArea all do: [ :each |
+	| ele |
+	ele := self dockChildFor: each.
+	((ele positionInSpace extent: ele extent) containsPoint: aPoint) ifTrue: [ ^ ele ] ].
+	^ nil.
+
 ]
 
 { #category : 'accessing' }
@@ -161,7 +175,7 @@ LpDock >> dragMovedTo: aPoint [
 
 	dragSession ifNil: [ ^ self ].
 	dragSession ghost position: (overlay globalPointToLocal: aPoint) + (12 @ 12).
-
+	self updateInsertionTarget: aPoint.
 ]
 
 { #category : 'accessing' }
@@ -198,11 +212,12 @@ LpDock >> endDragging [
 	session := dragSession ifNil: [ ^ self ].
 	dragSession := nil.
 	session ghost ifNotNil: [ :ghost | ghost hasParent ifTrue: [ ghost removeFromParent ] ].
+	session insertionMarker ifNotNil: [ :marker | marker hasParent ifTrue: [ marker removeFromParent ] ].
 	self dockChildrenDo: [ :each | each exitDragMode ].
 	self suppressMorphs: false.
 	self fireEvent: (LpDragEndedEvent new
-			widget: session widget;
-			yourself).
+			 widget: session widget;
+			 yourself).
 ]
 
 { #category : 'sizes' }
@@ -215,14 +230,6 @@ LpDock >> endWidth [
 LpDock >> endWidth: aNumber [
 
 	self setSize: aNumber ofArea: LpArea end.
-]
-
-{ #category : 'morph' }
-LpDock >> firstFreeArea [
-
-	^ LpArea all
-		detect: [ :each | (self dockChildFor: each) isEmpty ]
-		ifNone: [ nil ].
 ]
 
 { #category : 'accessing' }
@@ -243,6 +250,15 @@ LpDock >> headerBar: anObject [
 	headerBar := anObject
 ]
 
+{ #category : 'accessing' }
+LpDock >> hideInsertionMarker [
+
+	dragSession ifNil: [ ^ self ].
+	dragSession insertionChild: nil.
+	dragSession insertionIndex: nil.
+	dragSession insertionMarker ifNotNil: [ :marker | marker visibility: BlVisibility gone ].
+]
+
 { #category : 'morph' }
 LpDock >> hostMorph [
 
@@ -260,7 +276,6 @@ LpDock >> initialize [
 	self layout: BlFrameLayout new.
 	self beMatchParent.
 	self background: self theme windowBackground.
-	playgroundCounter := 0.
 	morphsSuppressed := false.
 	self initializeAreas.
 	self initializeBody.
@@ -427,26 +442,26 @@ LpDock >> newGhostFor: aWidget [
 	^ ghost.
 ]
 
+{ #category : 'accessing' }
+LpDock >> newInsertionMarker [
+
+	^ BlElement new
+		  background: self theme accentColor;
+		  visibility: BlVisibility gone;
+		  preventMeAndChildrenMouseEvents;
+		  yourself.
+]
+
 { #category : 'morph' }
 LpDock >> newPlayground [
 
 	^ self newPlaygroundIn: LpArea bottom.
 ]
 
-{ #category : 'morph' }
+{ #category : 'accessing' }
 LpDock >> newPlaygroundIn: anArea [
 
-	| target panel |
-	target := anArea.
-	(self dockChildFor: anArea) isEmpty ifFalse: [ target := self firstFreeArea ].
-	target ifNil: [ ^ self error: 'Every area already holds a panel; close one first' ].
-	playgroundCounter := playgroundCounter + 1.
-	panel := LpTempPanel
-		title: 'Playground ' , playgroundCounter printString
-		content: self playgroundFactory value.
-	(self dockChildFor: target) content: panel.
-	^ panel.
-
+	^ self open: LpPlaygroundTool in: anArea.
 ]
 
 { #category : 'accessing' }
@@ -461,6 +476,16 @@ LpDock >> newScrim [
 		anEvent consume.
 		self closePopup ].
 	^ ele.
+]
+
+{ #category : 'action' }
+LpDock >> open: aToolClass in: anArea [
+
+	| panel |
+	panel := LpTempPanel title: (self titleFor: aToolClass) content: aToolClass newContent.
+	panel tool: aToolClass.
+	(self dockChildFor: anArea) reveal: true; addPanel: panel.
+	^ panel.
 ]
 
 { #category : 'accessing' }
@@ -479,31 +504,7 @@ LpDock >> overlay: anObject [
 LpDock >> panels [
 
 	^ Array streamContents: [ :stream |
-		self dockChildrenDo: [ :each | each content ifNotNil: [ :panel | stream nextPut: panel ] ] ].
-]
-
-{ #category : 'morph' }
-LpDock >> playgroundCounter [
-
-	^ playgroundCounter.
-]
-
-{ #category : 'morph' }
-LpDock >> playgroundCounter: anObject [
-
-	playgroundCounter := anObject
-]
-
-{ #category : 'morph' }
-LpDock >> playgroundFactory [
-
-	^ playgroundFactory ifNil: [ playgroundFactory := [ LpMorphElement playground ] ].
-]
-
-{ #category : 'morph' }
-LpDock >> playgroundFactory: aBlock [
-
-	playgroundFactory := aBlock.
+		self dockChildrenDo: [ :each | stream nextPutAll: each panels ] ].
 ]
 
 { #category : 'accessing' }
@@ -576,6 +577,20 @@ LpDock >> setSize: aNumber ofArea: anArea [
 ]
 
 { #category : 'accessing' }
+LpDock >> showInsertionMarkerFor: aDockChild at: anIndex [
+
+	| marker bounds |
+	marker := dragSession insertionMarker ifNil: [
+				  dragSession insertionMarker: self newInsertionMarker.
+				  overlay addChild: dragSession insertionMarker.
+				  dragSession insertionMarker ].
+	bounds := aDockChild insertionMarkerBoundsAt: anIndex.
+	marker position: bounds origin - overlay positionInSpace.
+	marker extent: bounds extent.
+	marker visibility: BlVisibility visible.
+]
+
+{ #category : 'accessing' }
 LpDock >> showMenu [
 
 	^ self
@@ -627,6 +642,18 @@ LpDock >> syncMorphElements [
 	self morphElementsDo: [ :each | each syncMorph ].
 ]
 
+{ #category : 'action' }
+LpDock >> titleFor: aToolClass [
+
+	| titles number |
+	titles := (self panels select: [ :each | each tool == aToolClass ]) 
+		collect: [ :each | each title ].
+	number := 1.
+	[ titles includes: aToolClass label , ' ' , number printString ] 
+		whileTrue: [ number := number + 1 ].
+	^ aToolClass label , ' ' , number printString.
+]
+
 { #category : 'accessing' }
 LpDock >> toggleArea: anArea [
 
@@ -643,4 +670,18 @@ LpDock >> topHeight [
 LpDock >> topHeight: aNumber [
 
 	self setSize: aNumber ofArea: LpArea top.
+]
+
+{ #category : 'accessing' }
+LpDock >> updateInsertionTarget: aPoint [
+
+	| child index |
+	dragSession ifNil: [ ^ self ].
+	child := self dockChildAt: aPoint.
+	(child isNil or: [ child isEmpty ]) ifTrue: [ ^ self hideInsertionMarker ].
+	index := child insertionIndexAt: aPoint.
+	dragSession insertionChild: child.
+	dragSession insertionIndex: index.
+	self showInsertionMarkerFor: child at: index.
+
 ]

@@ -149,6 +149,12 @@ LpArea >> name [
 	^ self subclassResponsibility.
 ]
 
+{ #category : 'accessing' }
+LpArea >> newDockChildContent [
+
+	^ self subclassResponsibility.
+]
+
 { #category : 'instance creation' }
 LpArea >> newResizerLayout [
 

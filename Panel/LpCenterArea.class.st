@@ -30,6 +30,12 @@ LpCenterArea >> name [
 	^ #center
 ]
 
+{ #category : 'accessing' }
+LpCenterArea >> newDockChildContent [
+
+	^ LpPaned horizontal.
+]
+
 { #category : 'geometry' }
 LpCenterArea >> resizeCursor [
 

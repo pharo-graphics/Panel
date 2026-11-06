@@ -31,6 +31,12 @@ LpStartArea >> name [
 ]
 
 { #category : 'accessing' }
+LpStartArea >> newDockChildContent [
+
+	^ LpPaned vertical.
+]
+
+{ #category : 'accessing' }
 LpStartArea >> newToggleIcon [
 
 	^ LpStartIcon new.

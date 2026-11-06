@@ -37,6 +37,12 @@ LpEndArea >> name [
 ]
 
 { #category : 'accessing' }
+LpEndArea >> newDockChildContent [
+
+	^ LpPaned vertical.
+]
+
+{ #category : 'accessing' }
 LpEndArea >> newToggleIcon [
 
 	^ LpEndIcon new.

@@ -6,7 +6,10 @@ Class {
 		'sourceTab',
 		'ghost',
 		'hoveredChild',
-		'sourceArea'
+		'sourceArea',
+		'insertionChild',
+		'insertionIndex',
+		'insertionMarker'
 	],
 	#category : 'Panel-Core',
 	#package : 'Panel',
@@ -45,6 +48,50 @@ LpDragSession >> hoveredChild [
 LpDragSession >> hoveredChild: aChild [
 
 	hoveredChild := aChild.
+]
+
+{ #category : 'accessing' }
+LpDragSession >> insertionChild [
+
+	^ insertionChild
+]
+
+{ #category : 'accessing' }
+LpDragSession >> insertionChild: anObject [
+
+	insertionChild := anObject
+]
+
+{ #category : 'accessing' }
+LpDragSession >> insertionIndex [
+
+	^ insertionIndex
+]
+
+{ #category : 'accessing' }
+LpDragSession >> insertionIndex: anObject [
+
+	insertionIndex := anObject
+]
+
+{ #category : 'accessing' }
+LpDragSession >> insertionIndexFor: aDockChild [
+
+	^ insertionChild == aDockChild
+		  ifTrue: [ insertionIndex ]
+		  ifFalse: [ nil ].
+]
+
+{ #category : 'accessing' }
+LpDragSession >> insertionMarker [
+
+	^ insertionMarker
+]
+
+{ #category : 'accessing' }
+LpDragSession >> insertionMarker: anObject [
+
+	insertionMarker := anObject
 ]
 
 { #category : 'accessing' }

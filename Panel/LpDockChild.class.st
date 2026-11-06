@@ -16,6 +16,20 @@ Class {
 	#tag : 'Elements'
 }
 
+{ #category : 'adding' }
+LpDockChild >> addPanel: aPanel [
+
+	^ self addPanel: aPanel at: self panels size + 1.
+]
+
+{ #category : 'adding' }
+LpDockChild >> addPanel: aPanel at: anIndex [
+
+	areaContent insert: aPanel at: anIndex.
+	self updateVisibility.
+	^ aPanel.
+]
+
 { #category : 'accessing' }
 LpDockChild >> applyConstraints [
 
@@ -30,12 +44,14 @@ LpDockChild >> area: anArea [
 
 	super area: anArea.
 	self dragPosition: (anArea defaultSizeIn: self theme).
+	areaContent := anArea newDockChildContent.
 	emptyPlaceholder := self newEmptyPlaceholder.
 	rail := self newRail.
 	dropOverlay := self newDropOverlay.
 	contentFrame := BlElement new
 		layout: BlFrameLayout new;
 		yourself.
+	contentFrame addChild: areaContent.
 	contentFrame addChild: emptyPlaceholder.
 	contentFrame addChild: rail.
 	contentFrame addChild: dropOverlay.
@@ -191,6 +207,38 @@ LpDockChild >> initialize [
 	self addEventHandler: LpDropHandler new.
 ]
 
+{ #category : 'adding' }
+LpDockChild >> insertionIndexAt: aSpacePoint [
+
+	| resizers |
+	resizers := areaContent resizers.
+	^ areaContent isHorizontal
+		  ifTrue: [ (resizers count: [ :each | each positionInSpace x + (each width / 2) < aSpacePoint x ]) + 1 ]
+		  ifFalse: [ (resizers count: [ :each | each positionInSpace y + (each height / 2) < aSpacePoint y ]) + 1 ].
+]
+
+{ #category : 'adding' }
+LpDockChild >> insertionMarkerBoundsAt: anIndex [
+
+	| gap |
+	gap := self insertionPositionAt: anIndex.
+	^ areaContent isHorizontal
+		  ifTrue: [ (gap x - 1) @ areaContent positionInSpace y extent: 2 @ areaContent height ]
+		  ifFalse: [ areaContent positionInSpace x @ (gap y - 1) extent: areaContent width @ 2 ].
+]
+
+{ #category : 'adding' }
+LpDockChild >> insertionPositionAt: anIndex [
+
+	| resizers last |
+	resizers := areaContent resizers asArray.
+	anIndex <= resizers size ifTrue: [ ^ (resizers at: anIndex) positionInSpace ].
+	last := resizers last.
+	^ areaContent isHorizontal
+		  ifTrue: [ (last positionInSpace x + last width) @ last positionInSpace y ]
+		  ifFalse: [ last positionInSpace x @ (last positionInSpace y + last height) ].
+]
+
 { #category : 'accessing' }
 LpDockChild >> isCollapsed [
 
@@ -212,7 +260,7 @@ LpDockChild >> isDropZone [
 { #category : 'accessing' }
 LpDockChild >> isEmpty [
 
-	^ areaContent isNil.
+	^ areaContent isEmpty.
 
 ]
 
@@ -234,6 +282,20 @@ LpDockChild >> lpReservedSizeAlong: anArea [
 	self isCollapsed ifTrue: [ ^ self theme railThickness ].
 	self isDropZone ifTrue: [ ^ self theme dropZoneSize ].
 	^ super lpReservedSizeAlong: anArea.
+]
+
+{ #category : 'adding' }
+LpDockChild >> movePanel: aPanel toGap: anIndexOrNil [
+
+	| current target |
+	anIndexOrNil ifNil: [ ^ aPanel ].
+	current := self panels indexOf: aPanel.
+	target := anIndexOrNil > current
+				  ifTrue: [ anIndexOrNil - 1 ]
+				  ifFalse: [ anIndexOrNil ].
+	target = current ifTrue: [ ^ aPanel ].
+	self removePanel: aPanel.
+	^ self addPanel: aPanel at: target.
 ]
 
 { #category : 'accessing' }
@@ -315,6 +377,18 @@ LpDockChild >> newRail [
 ]
 
 { #category : 'accessing' }
+LpDockChild >> paned [
+
+	^ areaContent.
+]
+
+{ #category : 'accessing' }
+LpDockChild >> panels [
+
+	^ areaContent panes.
+]
+
+{ #category : 'accessing' }
 LpDockChild >> rail [
 
 	^ rail
@@ -326,18 +400,25 @@ LpDockChild >> rail: anObject [
 	rail := anObject
 ]
 
-{ #category : 'accessing' }
-LpDockChild >> receiveDroppedWidget: p [
+{ #category : 'adding' }
+LpDockChild >> receiveDroppedWidget: aPanel [
 
-	| src ele |
+	| source gap |
 	self reveal: true.
-	src := p dockChild.
-	src == self ifTrue: [ ^ p ].
-	ele := areaContent.
-	src ifNotNil: [ :dc | dc content: nil ].
-	self content: p.
-	(src notNil and: [ ele notNil ]) ifTrue: [ src content: ele ].
-	^ p.
+	source := aPanel dockChild.
+	gap := self dragSession ifNotNil: [ :session | session insertionIndexFor: self ].
+	source == self ifTrue: [ ^ self movePanel: aPanel toGap: gap ].
+	source ifNotNil: [ :aDockChild | aDockChild removePanel: aPanel ].
+	^ self addPanel: aPanel at: (gap ifNil: [ self panels size + 1 ]).
+]
+
+{ #category : 'accessing' }
+LpDockChild >> removePanel: aPanel [
+
+	areaContent remove: aPanel.
+	self updateVisibility.
+	^ aPanel.
+
 ]
 
 { #category : 'accessing' }
@@ -368,16 +449,16 @@ LpDockChild >> revealed: anObject [
 { #category : 'accessing' }
 LpDockChild >> showCollapsed [
 
-	areaContent ifNotNil: [ :panel | panel visibility: BlVisibility gone ].
+	areaContent visibility: BlVisibility gone.
 	emptyPlaceholder visibility: BlVisibility gone.
 	rail visibility: BlVisibility visible.
-	self handleVisible: false
+	self handleVisible: false.
 ]
 
 { #category : 'accessing' }
 LpDockChild >> showExpanded [
 
-	areaContent ifNotNil: [ :panel | panel visibility: BlVisibility visible ].
+	areaContent visibility: BlVisibility visible.
 	emptyPlaceholder visibility: (self isEmpty
 			ifTrue: [ BlVisibility visible ]
 			ifFalse: [ BlVisibility gone ]).
@@ -399,6 +480,7 @@ LpDockChild >> updateChildrenVisibility [
 		ifTrue: [ self showCollapsed ]
 		ifFalse: [ self showExpanded ].
 	self updateDropOverlay.
+
 ]
 
 { #category : 'accessing' }

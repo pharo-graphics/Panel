@@ -37,6 +37,12 @@ LpBottomArea >> name [
 ]
 
 { #category : 'accessing' }
+LpBottomArea >> newDockChildContent [
+
+	^ LpPaned horizontal.
+]
+
+{ #category : 'accessing' }
 LpBottomArea >> newToggleIcon [
 
 	^ LpBottomIcon new.

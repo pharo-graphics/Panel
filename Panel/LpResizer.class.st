@@ -77,6 +77,12 @@ LpResizer >> axisExtent [
 ]
 
 { #category : 'resizing' }
+LpResizer >> beFlexible [
+
+	self dragPosition: nil.
+]
+
+{ #category : 'resizing' }
 LpResizer >> beginResize [
 
 	dragOriginSize := self axisExtent.

@@ -31,6 +31,12 @@ LpTopArea >> name [
 ]
 
 { #category : 'accessing' }
+LpTopArea >> newDockChildContent [
+
+	^ LpPaned horizontal.
+]
+
+{ #category : 'accessing' }
 LpTopArea >> newToggleIcon [
 
 	^ LpTopIcon new.

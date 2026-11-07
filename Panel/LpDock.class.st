@@ -446,7 +446,7 @@ LpDock >> newGhostFor: aWidget [
 LpDock >> newInsertionMarker [
 
 	^ BlElement new
-		  background: self theme accentColor;
+		  background: self theme dropZoneHoverColor;
 		  visibility: BlVisibility gone;
 		  preventMeAndChildrenMouseEvents;
 		  yourself.

@@ -70,7 +70,7 @@ LpMorphElement >> fallbackLabel: anObject [
 { #category : 'accessing' }
 LpMorphElement >> fallbackText [
 
-	^ 'playground opened'.
+	^ 'Tool opened'.
 ]
 
 { #category : 'accessing' }
@@ -179,6 +179,9 @@ LpMorphElement >> syncMorph [
 	self isShownInDock
 		ifTrue: [
 			morph bounds: self morphBounds.
-			morph show ]
-		ifFalse: [ morph hide ].
+			morph show.
+			fallbackLabel visibility: BlVisibility hidden ]
+		ifFalse: [
+			morph hide.
+			fallbackLabel visibility: BlVisibility visible ].
 ]

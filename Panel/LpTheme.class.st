@@ -440,7 +440,7 @@ LpTheme >> initialize [
 	fontSize := 12.
 	headerHeight := 30.
 	headerBarHeight := 36.
-	handleThickness := 6.
+	handleThickness := 4.
 	panelMinimumSize := 48.
 	centerMinimumSize := 96.
 	defaultSideWidth := 200.

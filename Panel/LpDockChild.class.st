@@ -188,6 +188,24 @@ LpDockChild >> enterDragMode [
 	self updateVisibility.
 ]
 
+{ #category : 'adding' }
+LpDockChild >> exchangePanel: aPanel withPanelAt: i [
+
+	| current n |
+	i ifNil: [ ^ aPanel ].
+	current := self panels indexOf: aPanel.
+	current = i ifTrue: [ ^ aPanel ].
+	n := self panels at: i.
+	
+	
+	self removePanel: aPanel .
+	self addPanel: aPanel at: i.
+	self removePanel: n .
+	self addPanel: n at: current.
+	
+	^ aPanel.
+]
+
 { #category : 'accessing' }
 LpDockChild >> exitDragMode [
 
@@ -210,33 +228,29 @@ LpDockChild >> initialize [
 { #category : 'adding' }
 LpDockChild >> insertionIndexAt: aSpacePoint [
 
-	| resizers |
+	| resizers before|
 	resizers := areaContent resizers.
-	^ areaContent isHorizontal
+	"^ areaContent isHorizontal
 		  ifTrue: [ (resizers count: [ :each | each positionInSpace x + (each width / 2) < aSpacePoint x ]) + 1 ]
-		  ifFalse: [ (resizers count: [ :each | each positionInSpace y + (each height / 2) < aSpacePoint y ]) + 1 ].
+		  ifFalse: [ (resizers count: [ :each | each positionInSpace y + (each height / 2) < aSpacePoint y ]) + 1 ]."
+	before := areaContent isHorizontal
+				  ifTrue: [ resizers count: [ :each | each positionInSpace x + each width <= aSpacePoint x ] ]
+				  ifFalse: [ resizers count: [ :each | each positionInSpace y + each height <= aSpacePoint y ] ].
+	^ before + 1 min: self panels size.
 ]
 
 { #category : 'adding' }
 LpDockChild >> insertionMarkerBoundsAt: anIndex [
 
-	| gap |
-	gap := self insertionPositionAt: anIndex.
+	| gap resizer|
+	"gap := self insertionPositionAt: anIndex.
 	^ areaContent isHorizontal
 		  ifTrue: [ (gap x - 1) @ areaContent positionInSpace y extent: 2 @ areaContent height ]
-		  ifFalse: [ areaContent positionInSpace x @ (gap y - 1) extent: areaContent width @ 2 ].
-]
+		  ifFalse: [ areaContent positionInSpace x @ (gap y - 1) extent: areaContent width @ 2 ]."
+		
+	resizer := areaContent resizers asArray at: anIndex.
+	^ resizer positionInSpace extent: resizer extent.
 
-{ #category : 'adding' }
-LpDockChild >> insertionPositionAt: anIndex [
-
-	| resizers last |
-	resizers := areaContent resizers asArray.
-	anIndex <= resizers size ifTrue: [ ^ (resizers at: anIndex) positionInSpace ].
-	last := resizers last.
-	^ areaContent isHorizontal
-		  ifTrue: [ (last positionInSpace x + last width) @ last positionInSpace y ]
-		  ifFalse: [ last positionInSpace x @ (last positionInSpace y + last height) ].
 ]
 
 { #category : 'accessing' }
@@ -282,20 +296,6 @@ LpDockChild >> lpReservedSizeAlong: anArea [
 	self isCollapsed ifTrue: [ ^ self theme railThickness ].
 	self isDropZone ifTrue: [ ^ self theme dropZoneSize ].
 	^ super lpReservedSizeAlong: anArea.
-]
-
-{ #category : 'adding' }
-LpDockChild >> movePanel: aPanel toGap: anIndexOrNil [
-
-	| current target |
-	anIndexOrNil ifNil: [ ^ aPanel ].
-	current := self panels indexOf: aPanel.
-	target := anIndexOrNil > current
-				  ifTrue: [ anIndexOrNil - 1 ]
-				  ifFalse: [ anIndexOrNil ].
-	target = current ifTrue: [ ^ aPanel ].
-	self removePanel: aPanel.
-	^ self addPanel: aPanel at: target.
 ]
 
 { #category : 'accessing' }
@@ -403,13 +403,16 @@ LpDockChild >> rail: anObject [
 { #category : 'adding' }
 LpDockChild >> receiveDroppedWidget: aPanel [
 
-	| source gap |
+	| source i |
 	self reveal: true.
 	source := aPanel dockChild.
-	gap := self dragSession ifNotNil: [ :session | session insertionIndexFor: self ].
-	source == self ifTrue: [ ^ self movePanel: aPanel toGap: gap ].
+	"gap := self dragSession ifNotNil: [ :session | session insertionIndexFor: self ].
+	source == self ifTrue: [ ^ self movePanel: aPanel toGap: gap ]."
+	i := self dragSession ifNotNil: [ :session | session insertionIndexFor: self ].
+	source == self ifTrue: [ ^ self exchangePanel: aPanel withPanelAt: i ].
 	source ifNotNil: [ :aDockChild | aDockChild removePanel: aPanel ].
-	^ self addPanel: aPanel at: (gap ifNil: [ self panels size + 1 ]).
+	
+	^ self addPanel: aPanel at: (i ifNil: [ self panels size + 1 ]).
 ]
 
 { #category : 'accessing' }
